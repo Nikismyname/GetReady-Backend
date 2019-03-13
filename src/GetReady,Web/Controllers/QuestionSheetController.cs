@@ -131,7 +131,21 @@ namespace GetReady.Web.Controllers
         {
             try
             {
-                var result = questionSheetService.GetAllGlobal();
+                var result = questionSheetService.GetAllItemsGlobal();
+                return Ok(result);
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
+            }
+        }
+
+        [HttpGet("GetAllFoldersGlobal")]
+        public IActionResult GetAllFoldersGlobal()
+        {
+            try
+            {
+                var result = questionSheetService.GetAllFoldersGlobal();
                 return Ok(result);
             }
             catch (Exception e)
@@ -147,7 +161,7 @@ namespace GetReady.Web.Controllers
             try
             {
                 var userData = jwtService.ParseData(this.User);
-                var result = questionSheetService.GetAllPersonal(userData.UserId);
+                var result = questionSheetService.GetAllFoldersPersonal(userData.UserId);
                 return Ok(result);
             }
             catch (Exception e)

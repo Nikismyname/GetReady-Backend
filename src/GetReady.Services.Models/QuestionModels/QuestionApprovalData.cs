@@ -1,9 +1,9 @@
 ﻿namespace GetReady.Services.Models.QuestionModels
 {
-    public class AddNewScoreData
+    public class QuestionApprovalData
     {
-        public int Score { get; set; }
-
         public int QuestionId { get; set; }
+
+        public int GlobalParentSheetId { get; set; }
     }
 }

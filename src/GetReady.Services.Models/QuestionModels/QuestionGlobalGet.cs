@@ -5,6 +5,8 @@
 
     public class QuestionGlobalGet: IMapFrom<GlobalQuestionPackage> 
     {
+        public int Id { get; set; }
+
         public string Name { get; set; }
 
         public string Question { get; set; }

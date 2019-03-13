@@ -21,6 +21,55 @@ namespace GetReady.Services.Implementations
         }
         #endregion
 
+        #region GetOne
+        public QuestionSheetGet GetOnePersonal(int id, int userId)
+        {
+            var user = context.Users.SingleOrDefault(x => x.Id == userId);
+            if (user == null)
+            {
+                throw new ServiceException("User Not Found!");
+            }
+
+            var sheet = context.QuestionSheets
+                .SingleOrDefault(x => x.Id == id && x.IsGlobal == false);
+            if (sheet == null)
+            {
+                throw new ServiceException("Sheet not found");
+            }
+
+            if (user.Id != sheet.UserId)
+            {
+                throw new ServiceException("Sheet does not belong to you!");
+            }
+
+            return new QuestionSheetGet
+            {
+                Name = sheet.Name,
+                Description = sheet.Description,
+                Difficulty = sheet.Difficulty,
+                Importance = sheet.Importance,
+            };
+        }
+
+        public QuestionSheetGet GetOnePublic(int id)
+        {
+            var sheet = context.QuestionSheets
+                .SingleOrDefault(x => x.Id == id && x.IsGlobal == true);
+            if (sheet == null)
+            {
+                throw new ServiceException("Sheet not found!");
+            }
+
+            return new QuestionSheetGet
+            {
+                Name = sheet.Name,
+                Description = sheet.Description,
+                Difficulty = sheet.Difficulty,
+                Importance = sheet.Importance,
+            };
+        }
+        #endregion
+
         #region GetIndex
         public QuestionSheetGlobalIndex GetGlobalSheetIndex(int sheetId)
         {
@@ -259,7 +308,7 @@ namespace GetReady.Services.Implementations
         #endregion
 
         #region GetAll
-        public PersonalSheetForAll[] GetAllPersonal(int userId)
+        public PersonalSheetForAllFolders[] GetAllFoldersPersonal(int userId)
         {
             var user = context.Users.SingleOrDefault(x => x.Id == userId);
             if (user == null)
@@ -269,17 +318,27 @@ namespace GetReady.Services.Implementations
 
             var allQuestionSheets = context.QuestionSheets
                 .Where(x => x.IsGlobal == false && x.UserId == user.Id)
-                .To<PersonalSheetForAll>()
+                .To<PersonalSheetForAllFolders>()
                 .ToArray();
 
             return allQuestionSheets;
         }
 
-        public GlobalSheetForAll[] GetAllGlobal()
+        public GlobalSheetForAllItems[] GetAllItemsGlobal()
         {
             var allSheets = this.context.QuestionSheets
                 .Where(x => x.IsGlobal == true)
-                .To<GlobalSheetForAll>()
+                .To<GlobalSheetForAllItems>()
+                .ToArray();
+
+            return allSheets;
+        }
+
+        public GlobalSheetForAllFolders[] GetAllFoldersGlobal()
+        {
+            var allSheets = this.context.QuestionSheets
+                .Where(x => x.IsGlobal == true)
+                .To<GlobalSheetForAllFolders>()
                 .ToArray();
 
             return allSheets;
@@ -366,55 +425,6 @@ namespace GetReady.Services.Implementations
             sheet.Importance = data.Importance.Value;
 
             context.SaveChanges();
-        }
-        #endregion
-
-        #region GetOne
-        public QuestionSheetGet GetOnePersonal(int id, int userId)
-        {
-            var user = context.Users.SingleOrDefault(x => x.Id == userId);
-            if (user == null)
-            {
-                throw new ServiceException("User Not Found!");
-            }
-
-            var sheet = context.QuestionSheets
-                .SingleOrDefault(x => x.Id == id && x.IsGlobal == false);
-            if (sheet == null)
-            {
-                throw new ServiceException("Sheet not found");
-            }
-
-            if(user.Id != sheet.UserId)
-            {
-                throw new ServiceException("Sheet does not belong to you!");
-            }
-
-            return new QuestionSheetGet
-            {
-                Name = sheet.Name,
-                Description = sheet.Description,
-                Difficulty = sheet.Difficulty,
-                Importance = sheet.Importance,
-            };
-        }
-
-        public QuestionSheetGet GetOnePublic(int id)
-        {
-            var sheet = context.QuestionSheets
-                .SingleOrDefault(x => x.Id == id && x.IsGlobal == true);
-            if (sheet == null)
-            {
-                throw new ServiceException("Sheet not found!");
-            }
-
-            return new QuestionSheetGet
-            {
-                Name = sheet.Name,
-                Description = sheet.Description,
-                Difficulty = sheet.Difficulty,
-                Importance = sheet.Importance,
-            };
         }
         #endregion
 

@@ -6,6 +6,7 @@ namespace GetReady.Services.Implementations
     using GetReady.Data.Models.QuestionModels;
     using GetReady.Services.Contracts;
     using GetReady.Services.Exceptions;
+    using GetReady.Services.Mapping;
     using GetReady.Services.Models.QuestionModels;
     using GetReady.Services.Utilities;
     using Microsoft.EntityFrameworkCore;
@@ -168,7 +169,8 @@ namespace GetReady.Services.Implementations
         #region Get
         public QuestionGlobalGet GetGlobal(int id)
         {
-            var model = this.context.GlobalQuestionPackages.SingleOrDefault(x => x.Id == id);
+            var model = this.context.GlobalQuestionPackages
+                .SingleOrDefault(x => x.Id == id);
             if (model == null)
             {
                 throw new ServiceException(Constants.WantedQuestionDoesNotExist);
@@ -203,6 +205,17 @@ namespace GetReady.Services.Implementations
             var result = Mapper.Map<QuestionPersonalGet>(personalQuestion);
             return result;
         }
+
+        public int[] GetQuestionIdsForApproval()
+        {
+            var toBeApproved = context
+                .GlobalQuestionPackages.Where(x => x.Approved == false)
+                .Select(x=> x.Id)
+                .ToArray();
+
+            return toBeApproved;
+        }
+
         #endregion
 
         #region Edit
@@ -259,112 +272,7 @@ namespace GetReady.Services.Implementations
         }
         #endregion
 
-        #region Other
-        public void CopyQuestions(CopyQuestions data, int userId)
-        {
-            var user = this.context.Users.SingleOrDefault(x => x.Id == userId);
-            if (user == null)
-            {
-                throw new ServiceException(Constants.UserNotFoundMessage);
-            }
-
-            var targetDirectory = this.context.QuestionSheets
-                .SingleOrDefault(x => x.Id == data.SelectedDir && x.IsGlobal == false);
-
-            if (targetDirectory == null)
-            {
-                throw new ServiceException("Target Directory Does Not Exist!");
-            }
-
-            if (targetDirectory.UserId != user.Id)
-            {
-                throw new ServiceException("Target Directory Does Not Belong To You!");
-            }
-
-            var globalQuestions = this.context.GlobalQuestionPackages
-                .Where(x => data.SelectedQuestions.Contains(x.Id))
-                .ToArray();
-
-            var personalQuestions = new List<PersonalQuestionPackage>();
-            for (int i = 0; i < globalQuestions.Length; i++)
-            {
-                var x = globalQuestions[i];
-                personalQuestions.Add(new PersonalQuestionPackage
-                {
-                    Name = x.Name,
-                    Question = x.Question,
-                    Answer = x.Answer,
-                    Comment = x.Comment,
-                    Difficulty = x.Difficulty,
-                    AnswerRate = 0,
-                    TimesBeingAnswered = 0,
-                    YourBestAnswer = "This is the first time you are answering this question",
-                    QuestionSheetId = targetDirectory.Id,
-                });
-            }
-
-            this.context.PersonalQuestionPackages.AddRange(personalQuestions);
-            context.SaveChanges();
-        }
-
-        const int numberOfStoredScores = 20;
-
-        public void AddNewScore(int score, int questionId, int userId)
-        {
-            if (score < 1 || score > 10)
-            {
-                throw new ServiceException("Score must be between 1 and 10!");
-            }
-
-            var user = context.Users.SingleOrDefault(x => x.Id == userId);
-            if (user == null)
-            {
-                throw new ServiceException("User not found!");
-            }
-
-            var question = context.PersonalQuestionPackages.SingleOrDefault(x => x.Id == questionId);
-            if (question == null)
-            {
-                throw new ServiceException("Question not found!");
-            }
-
-            var parentSheetUserId = context.QuestionSheets.SingleOrDefault(x => x.Id == question.QuestionSheetId)?.UserId;
-            if (parentSheetUserId == null)
-            {
-                throw new ServiceException("Parent Sheet Not Found!");
-            }
-
-            if (parentSheetUserId != user.Id)
-            {
-                throw new ServiceException("Question does not beling to you!");
-            }
-
-            var scoresString = question.LastTenScores;
-            if (scoresString != null)
-            {
-                var scores = scoresString.Split(",", StringSplitOptions.RemoveEmptyEntries).ToList();
-                if (scores.Count == 0)
-                {
-                    question.LastTenScores = score.ToString();
-                }
-                else
-                {
-                    if (scores.Count >= numberOfStoredScores)
-                    {
-                        scores.RemoveAt(0);
-                    }
-                    scores.Add(score.ToString());
-                    question.LastTenScores = string.Join(",", scores);
-                }
-            }
-            else
-            {
-                question.LastTenScores = score.ToString();
-            }
-
-            context.SaveChanges();
-        }
-
+        #region Reorder
         public void Reorder(ReorderData data, int userId)
         {
             var sheet = this.context.QuestionSheets
@@ -464,42 +372,182 @@ namespace GetReady.Services.Implementations
 
             context.SaveChanges();
         }
+        #endregion
+
+        #region Approve/Reject Question
+        public void ApproveQuestion(QuestionApprovalData data)
+        {
+            var question = context.GlobalQuestionPackages
+                .SingleOrDefault(x => x.Id == data.QuestionId && x.Approved == false);
+            if (question == null)
+            {
+                throw new ServiceException("Question Not Found!");
+            }
+
+            question.Approved = true;
+            question.QuestionSheetId = data.GlobalParentSheetId;
+        }
+
+        public void RejectQuestion(int questionId)
+        {
+            var question = context.GlobalQuestionPackages
+                .SingleOrDefault(x => x.Id == questionId && x.Approved == false);
+            if (question == null)
+            {
+                throw new ServiceException("Question Not Found!");
+            }
+
+            context.GlobalQuestionPackages.Remove(question);
+            context.SaveChanges();
+        }
+        #endregion
+
+        #region Other
+        public void CopyQuestions(CopyQuestions data, int userId)
+        {
+            var user = this.context.Users.SingleOrDefault(x => x.Id == userId);
+            if (user == null)
+            {
+                throw new ServiceException(Constants.UserNotFoundMessage);
+            }
+
+            var targetDirectory = this.context.QuestionSheets
+                .SingleOrDefault(x => x.Id == data.SelectedDir && x.IsGlobal == false);
+
+            if (targetDirectory == null)
+            {
+                throw new ServiceException("Target Directory Does Not Exist!");
+            }
+
+            if (targetDirectory.UserId != user.Id)
+            {
+                throw new ServiceException("Target Directory Does Not Belong To You!");
+            }
+
+            var globalQuestions = this.context.GlobalQuestionPackages
+                .Where(x => data.SelectedQuestions.Contains(x.Id))
+                .ToArray();
+
+            var personalQuestions = new List<PersonalQuestionPackage>();
+            for (int i = 0; i < globalQuestions.Length; i++)
+            {
+                var globalQuestion = globalQuestions[i];
+                personalQuestions.Add(new PersonalQuestionPackage
+                {
+                    Name = globalQuestion.Name,
+                    Question = globalQuestion.Question,
+                    Answer = globalQuestion.Answer,
+                    Comment = globalQuestion.Comment,
+                    Difficulty = globalQuestion.Difficulty,
+                    AnswerRate = 0,
+                    TimesBeingAnswered = 0,
+                    YourBestAnswer = "This is the first time you are answering this question",
+                    QuestionSheetId = targetDirectory.Id,
+                    DerivedFromId = globalQuestion.Id,
+                });
+            }
+
+            this.context.PersonalQuestionPackages.AddRange(personalQuestions);
+            context.SaveChanges();
+        }
+
+        const int numberOfStoredScores = 20;
+        public void AddNewScore(NewScoreData data, int userId)
+        {
+            var score = data.Score;
+            var questionId = data.QuestionId;
+
+            if (score < 1 || score > 10)
+            {
+                throw new ServiceException("Score must be between 1 and 10!");
+            }
+
+            var user = context.Users.SingleOrDefault(x => x.Id == userId);
+            if (user == null)
+            {
+                throw new ServiceException("User not found!");
+            }
+
+            var question = context.PersonalQuestionPackages.SingleOrDefault(x => x.Id == questionId);
+            if (question == null)
+            {
+                throw new ServiceException("Question not found!");
+            }
+
+            var parentSheetUserId = context.QuestionSheets.SingleOrDefault(x => x.Id == question.QuestionSheetId)?.UserId;
+            if (parentSheetUserId == null)
+            {
+                throw new ServiceException("Parent Sheet Not Found!");
+            }
+
+            if (parentSheetUserId != user.Id)
+            {
+                throw new ServiceException("Question does not beling to you!");
+            }
+
+            var scoresString = question.LatestScores;
+            if (scoresString != null)
+            {
+                var scores = scoresString.Split(",", StringSplitOptions.RemoveEmptyEntries).ToList();
+                if (scores.Count == 0)
+                {
+                    question.LatestScores = score.ToString();
+                }
+                else
+                {
+                    if (scores.Count >= numberOfStoredScores)
+                    {
+                        scores.RemoveAt(0);
+                    }
+                    scores.Add(score.ToString());
+                    question.LatestScores = string.Join(",", scores);
+                }
+            }
+            else
+            {
+                question.LatestScores = score.ToString();
+            }
+
+            context.SaveChanges();
+        }
 
         public void SuggestForPublishing(int personalQuestionId, int userId)
         {
             var user = context.Users
                 .SingleOrDefault(x => x.Id == userId);
-            if(user == null)
+            if (user == null)
             {
                 throw new ServiceException("User Not Found!");
             }
 
-            var question = context.PersonalQuestionPackages
+            var personalQuestion = context.PersonalQuestionPackages
                 .SingleOrDefault(x => x.Id == personalQuestionId);
-            if(question == null)
+            if (personalQuestion == null)
             {
                 throw new ServiceException("Question Not Found!");
             }
 
             var sheetUserId = context.QuestionSheets
-                .SingleOrDefault(x => x.Id == question.QuestionSheetId)?.UserId;
-            if(sheetUserId == null)
+                .SingleOrDefault(x => x.Id == personalQuestion.QuestionSheetId)?.UserId;
+            if (sheetUserId == null)
             {
                 throw new ServiceException("Parent Sheet Not Found!");
             }
 
-            if(sheetUserId != user.Id)
+            if (sheetUserId != user.Id)
             {
                 throw new ServiceException("Question Does not belong to you!");
             }
 
-            var proposedQuestion = Mapper.Map<GlobalQuestionPackage>(question);
-            proposedQuestion.Approved = false;
-            proposedQuestion.QuestionSheetId = -1;
-            proposedQuestion.Order = 0;
-            proposedQuestion.Column = 0;
+            var proposedGlobalQuestion = Mapper.Map<GlobalQuestionPackage>(personalQuestion);
+            proposedGlobalQuestion.Id = 0;
+            proposedGlobalQuestion.Approved = false;
+            proposedGlobalQuestion.QuestionSheetId = null;
+            proposedGlobalQuestion.Order = 0;
+            proposedGlobalQuestion.Column = 0;
+            proposedGlobalQuestion.DerivedFromId = personalQuestion.Id;
 
-            context.GlobalQuestionPackages.Add(proposedQuestion);
+            context.GlobalQuestionPackages.Add(proposedGlobalQuestion);
             context.SaveChanges();
         }
     }

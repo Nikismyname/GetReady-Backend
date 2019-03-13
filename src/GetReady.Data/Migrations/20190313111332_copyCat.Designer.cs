@@ -4,14 +4,16 @@ using GetReady.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace GetReady.Data.Migrations
 {
     [DbContext(typeof(GetReadyDbContext))]
-    partial class GetReadyDbContextModelSnapshot : ModelSnapshot
+    [Migration("20190313111332_copyCat")]
+    partial class copyCat
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -43,7 +45,7 @@ namespace GetReady.Data.Migrations
 
                     b.Property<string>("Question");
 
-                    b.Property<int?>("QuestionSheetId");
+                    b.Property<int>("QuestionSheetId");
 
                     b.HasKey("Id");
 
@@ -153,7 +155,8 @@ namespace GetReady.Data.Migrations
                 {
                     b.HasOne("GetReady.Data.Models.QuestionModels.QuestionSheet", "QuestionSheet")
                         .WithMany("GlobalQuestions")
-                        .HasForeignKey("QuestionSheetId");
+                        .HasForeignKey("QuestionSheetId")
+                        .OnDelete(DeleteBehavior.Cascade);
                 });
 
             modelBuilder.Entity("GetReady.Data.Models.QuestionModels.PersonalQuestionPackage", b =>

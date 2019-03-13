@@ -4,14 +4,16 @@ using GetReady.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace GetReady.Data.Migrations
 {
     [DbContext(typeof(GetReadyDbContext))]
-    partial class GetReadyDbContextModelSnapshot : ModelSnapshot
+    [Migration("20190313113657_NullableGlobalQuestionSheetId")]
+    partial class NullableGlobalQuestionSheetId
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

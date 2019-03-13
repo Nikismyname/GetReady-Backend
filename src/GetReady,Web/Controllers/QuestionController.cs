@@ -1,4 +1,5 @@
-﻿namespace GetReady.Web.Controllers
+﻿#region Inti
+namespace GetReady.Web.Controllers
 {
     using System;
     using GetReady.Services.Contracts;
@@ -19,6 +20,7 @@
             this.jwtService = jwtService;
             this.questionService = questionController;
         }
+        #endregion
 
         #region Get 
         [HttpPost]
@@ -52,6 +54,22 @@
                 return BadRequest(e.Message);
             }
         }
+
+        [HttpGet("GetQuestionsForApproval")]
+        [ClaimRequirement(Constants.RoleType, "Admin")]
+        public IActionResult GetQuestionIdsForApproval()
+        {
+            try
+            {
+                var result = questionService.GetQuestionIdsForApproval();
+                return Ok(result);
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
+            }
+        }
+
         #endregion
 
         #region Delete
@@ -176,41 +194,7 @@
         }
         #endregion
 
-        #region Other
-        [HttpPost]
-        [Route("[action]")]
-        [ClaimRequirement(Constants.RoleType, "User")]
-        public IActionResult CopyQuestions([FromBody] CopyQuestions data)
-        {
-            try
-            {
-                var userData = jwtService.ParseData(this.User);
-                questionService.CopyQuestions(data, userData.UserId);
-                return Ok();
-            }
-            catch (Exception e)
-            {
-                return BadRequest(e.Message);
-            }
-        }
-
-        [HttpPost]
-        [Route("[action]")]
-        [ClaimRequirement(Constants.RoleType, "User")]
-        public IActionResult AddNewScore([FromBody] AddNewScoreData data)
-        {
-            try
-            {
-                var userData = jwtService.ParseData(this.User);
-                questionService.AddNewScore(data.Score,data.QuestionId,userData.UserId);
-                return Ok();
-            }
-            catch (Exception e)
-            {
-                return BadRequest(e.Message);
-            }
-        }
-
+        #region Reorder
         [HttpPost]
         [Route("[action]")]
         [ClaimRequirement(Constants.RoleType, "Admin")]
@@ -236,6 +220,93 @@
             {
                 var userData = jwtService.ParseData(this.User);
                 questionService.Reorder(data, userData.UserId);
+                return Ok();
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
+            }
+        }
+        #endregion
+
+        #region Approve/Reject Question
+        [HttpPost]
+        [Route("[action]")]
+        [ClaimRequirement(Constants.RoleType, "Admin")]
+        public IActionResult ApproveQuestion([FromBody] QuestionApprovalData data)
+        {
+            try
+            {
+                questionService.ApproveQuestion(data);
+                return Ok();
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
+            }
+        }
+
+        [HttpPost]
+        [Route("[action]")]
+        [ClaimRequirement(Constants.RoleType, "Admin")]
+        public IActionResult RejectQuestion([FromBody] int id)
+        {
+            try
+            {
+                questionService.RejectQuestion(id);
+                return Ok();
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
+            }
+        }
+        #endregion
+
+        #region Other
+        [HttpPost]
+        [Route("[action]")]
+        [ClaimRequirement(Constants.RoleType, "User")]
+        public IActionResult CopyQuestions([FromBody] CopyQuestions data)
+        {
+            try
+            {
+                var userData = jwtService.ParseData(this.User);
+                questionService.CopyQuestions(data, userData.UserId);
+                return Ok();
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
+            }
+        }
+
+        [HttpPost]
+        [Route("[action]")]
+        [ClaimRequirement(Constants.RoleType, "User")]
+        public IActionResult AddNewScore([FromBody] NewScoreData data)
+        {
+            try
+            {
+                var userData = jwtService.ParseData(this.User);
+                questionService.AddNewScore(data, userData.UserId);
+                return Ok();
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
+            }
+        }
+
+        [HttpPost]
+        [Route("[action]")]
+        [ClaimRequirement(Constants.RoleType, "User")]
+        public IActionResult SuggestForPublishing([FromBody] int questionId)
+        {
+            try
+            {
+                var userData = jwtService.ParseData(this.User);
+                questionService.SuggestForPublishing(questionId, userData.UserId);
                 return Ok();
             }
             catch (Exception e)

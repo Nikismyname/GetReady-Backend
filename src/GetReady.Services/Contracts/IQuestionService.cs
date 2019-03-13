@@ -2,7 +2,7 @@
 {
     using GetReady.Services.Models.QuestionModels;
 
-    public interface IQuestionService
+    public interface IQuestionService //17
     {
         int CreatePersonal(QuestionCreate data, int userId);
 
@@ -20,19 +20,26 @@
 
         QuestionPersonalGet GetPersonal(int id, int userId);
 
+        int[] GetQuestionIdsForApproval();
 
         void EditPersonal(QuestionEdit data, int userId);
 
         void EditGlobal(QuestionEdit data);
 
 
-        void CopyQuestions(CopyQuestions data, int userId);
-
-        void AddNewScore(int score, int questionId, int userId);
-
         void Reorder(ReorderData data, int userId);
 
         void ReorderGlobal(ReorderData data);
+
+
+        void ApproveQuestion(QuestionApprovalData data);
+
+        void RejectQuestion(int questionId);
+
+
+        void CopyQuestions(CopyQuestions data, int userId);
+
+        void AddNewScore(NewScoreData data, int userId);
 
         void SuggestForPublishing(int personalQuestionId, int userId); 
     }

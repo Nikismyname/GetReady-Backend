@@ -9,7 +9,7 @@
             this.Approved = true;
         }
 
-        public int Id { get; set; }
+        public int Id { get; set; } 
 
         public string Name { get; set; }
 
@@ -27,9 +27,12 @@
 
         public bool Approved { get; set; }
 
-        public int QuestionSheetId { get; set; }
-        public QuestionSheet QuestionSheet { get; set; }
+        /// <summary>
+        /// The Personal Question this one has been copied from.
+        /// </summary>
+        public int? DerivedFromId { get; set; }
 
-        public string  TestyTest { get; set; }
+        public int? QuestionSheetId { get; set; }
+        public QuestionSheet QuestionSheet { get; set; }
     }
 }
