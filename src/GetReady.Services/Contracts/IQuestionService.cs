@@ -20,7 +20,10 @@
 
         QuestionPersonalGet GetPersonal(int id, int userId);
 
+        PersonalQuestionSheetForUserReview[] GetAnsweredQuestions(int userId);
+
         int[] GetQuestionIdsForApproval();
+
 
         void EditPersonal(QuestionEdit data, int userId);
 

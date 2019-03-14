@@ -14,6 +14,7 @@
     using System;
     using Microsoft.AspNetCore.Authentication.JwtBearer;
     using Microsoft.IdentityModel.Tokens;
+    using GetReady.Data.Models.QuestionModels;
 
     public class Startup
     {
@@ -28,7 +29,9 @@
         {
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
 
-            AutoMapperConfig.RegisterMappings(typeof(CopyQuestions).Assembly);
+            AutoMapperConfig.RegisterMappings(
+                typeof(CopyQuestions).Assembly,
+                typeof(GlobalQuestionPackage).Assembly);
 
             services.AddTransient<IUserService, UserService>();
             services.AddTransient<ISeederService, SeederService>();

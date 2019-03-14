@@ -136,13 +136,24 @@ namespace GetReady.Services.Implementations
                 throw new ServiceException("Bad Request!");
             }
 
+            var order = 0;
+            var orders = context.QuestionSheets
+                .Where(x => x.QuestionSheetId == data.ParentSheetId)
+                .Select(x=>x.Order)
+                .ToArray();
+
+            if(orders.Length > 0)
+            {
+                order = orders.Max() + 1;
+            }
+
             var sheet = new QuestionSheet
             {
                 Description = data.Description,
                 Difficulty = data.Difficulty,
                 Importance = data.Importance.Value,
                 Name = data.Name,
-                Order = 1,
+                Order = order,
                 QuestionSheetId = data.ParentSheetId,
                 IsGlobal = true,
                 UserId = null,
@@ -168,13 +179,23 @@ namespace GetReady.Services.Implementations
                 throw new ServiceException("Parent Sheet Does Not Belong To You!");
             }
 
+            var order = 0;
+            var orders = context.QuestionSheets
+                .Where(x => x.QuestionSheetId == data.ParentSheetId)
+                .Select(x => x.Order)
+                .ToArray();
+            if (orders.Length > 0)
+            {
+                order = orders.Max() + 1;
+            }
+
             var sheet = new QuestionSheet
             {
                 Description = data.Description,
                 Difficulty = data.Difficulty.Value,
                 Importance = data.Importance.Value,
                 Name = data.Name,
-                Order = 1,
+                Order = order,
                 QuestionSheetId = data.ParentSheetId,
                 IsGlobal = false,
                 UserId = user.Id,

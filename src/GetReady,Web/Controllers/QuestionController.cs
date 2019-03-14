@@ -55,13 +55,29 @@ namespace GetReady.Web.Controllers
             }
         }
 
-        [HttpGet("GetQuestionsForApproval")]
+        [HttpGet("GetQuestionIdsForApproval")]
         [ClaimRequirement(Constants.RoleType, "Admin")]
         public IActionResult GetQuestionIdsForApproval()
         {
             try
             {
                 var result = questionService.GetQuestionIdsForApproval();
+                return Ok(result);
+            }
+            catch (Exception e)
+            {
+                return BadRequest(e.Message);
+            }
+        }
+
+        [HttpGet("GetAnsweredQuestions")]
+        [ClaimRequirement(Constants.RoleType, "User")]
+        public IActionResult GetAnsweredQuestions()
+        {
+            try
+            {
+                var userData = jwtService.ParseData(this.User);
+                var result = questionService.GetAnsweredQuestions(userData.UserId);
                 return Ok(result);
             }
             catch (Exception e)

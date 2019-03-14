@@ -216,6 +216,23 @@ namespace GetReady.Services.Implementations
             return toBeApproved;
         }
 
+        public PersonalQuestionSheetForUserReview[] GetAnsweredQuestions(int userId)
+        {
+            var user = context.Users.SingleOrDefault(x => x.Id == userId);
+            if (user == null)
+            {
+                throw new ServiceException("User Not Found!");
+            }
+
+            var answeredQuestions = context.QuestionSheets
+                .Where(x => x.UserId == userId && x.IsGlobal == false)
+                .SelectMany(x => x.PersonalQuestions)
+                .Where(x => x.AnswerRate != 0)
+                .To<PersonalQuestionSheetForUserReview>()
+                .ToArray();
+
+            return answeredQuestions;
+        }
         #endregion
 
         #region Edit
@@ -386,6 +403,7 @@ namespace GetReady.Services.Implementations
 
             question.Approved = true;
             question.QuestionSheetId = data.GlobalParentSheetId;
+            context.SaveChanges();
         }
 
         public void RejectQuestion(int questionId)
@@ -492,6 +510,7 @@ namespace GetReady.Services.Implementations
                 if (scores.Count == 0)
                 {
                     question.LatestScores = score.ToString();
+                    question.AnswerRate = score;
                 }
                 else
                 {
@@ -501,12 +520,48 @@ namespace GetReady.Services.Implementations
                     }
                     scores.Add(score.ToString());
                     question.LatestScores = string.Join(",", scores);
+
+                    ///Calculating the everage 
+                    var intSocres = scores.Select(x=>int.Parse(x)).Reverse().ToArray();
+                    var scoresLength = intSocres.Length;
+                    if(scoresLength> 5)
+                    {
+                        scoresLength = 5;
+                    }
+
+                    float newRate = 0;
+                    var weights = new float[] {60, 20, 10, 5, 5 };
+
+                    if(scoresLength< 5)
+                    {
+                        var lessBy = 5 - scoresLength;
+                        var leftoverValue = weights.Reverse().Take(lessBy).Sum();
+                        var valuesStillInPlay = weights.Take(scoresLength).ToArray();
+                        var newTotal = valuesStillInPlay.Sum();
+                        var remainderWeights = valuesStillInPlay.Select(x => x / newTotal * 100).ToArray();
+                        for (int i = 0; i < valuesStillInPlay.Length; i++)
+                        {
+                            valuesStillInPlay[i] += remainderWeights[i] * leftoverValue;
+                        }
+
+                        weights = valuesStillInPlay;
+                    }
+
+                    for (int i = 0; i < weights.Length; i++)
+                    {
+                        newRate += intSocres[i] * weights[i];
+                    }
+
+                    question.AnswerRate = newRate;
                 }
             }
             else
             {
                 question.LatestScores = score.ToString();
+                question.AnswerRate = score;
             }
+
+            question.TimesBeingAnswered++;
 
             context.SaveChanges();
         }
