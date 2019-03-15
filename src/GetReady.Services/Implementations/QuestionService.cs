@@ -210,7 +210,7 @@ namespace GetReady.Services.Implementations
         {
             var toBeApproved = context
                 .GlobalQuestionPackages.Where(x => x.Approved == false)
-                .Select(x=> x.Id)
+                .Select(x => x.Id)
                 .ToArray();
 
             return toBeApproved;
@@ -444,6 +444,8 @@ namespace GetReady.Services.Implementations
 
             var globalQuestions = this.context.GlobalQuestionPackages
                 .Where(x => data.SelectedQuestions.Contains(x.Id))
+                .OrderBy(x=>x.Column)
+                .ThenBy(x=>x.Order)
                 .ToArray();
 
             var personalQuestions = new List<PersonalQuestionPackage>();
@@ -504,66 +506,74 @@ namespace GetReady.Services.Implementations
             }
 
             var scoresString = question.LatestScores;
-            if (scoresString != null)
-            {
-                var scores = scoresString.Split(",", StringSplitOptions.RemoveEmptyEntries).ToList();
-                if (scores.Count == 0)
-                {
-                    question.LatestScores = score.ToString();
-                    question.AnswerRate = score;
-                }
-                else
-                {
-                    if (scores.Count >= numberOfStoredScores)
-                    {
-                        scores.RemoveAt(0);
-                    }
-                    scores.Add(score.ToString());
-                    question.LatestScores = string.Join(",", scores);
-
-                    ///Calculating the everage 
-                    var intSocres = scores.Select(x=>int.Parse(x)).Reverse().ToArray();
-                    var scoresLength = intSocres.Length;
-                    if(scoresLength> 5)
-                    {
-                        scoresLength = 5;
-                    }
-
-                    float newRate = 0;
-                    var weights = new float[] {60, 20, 10, 5, 5 };
-
-                    if(scoresLength< 5)
-                    {
-                        var lessBy = 5 - scoresLength;
-                        var leftoverValue = weights.Reverse().Take(lessBy).Sum();
-                        var valuesStillInPlay = weights.Take(scoresLength).ToArray();
-                        var newTotal = valuesStillInPlay.Sum();
-                        var remainderWeights = valuesStillInPlay.Select(x => x / newTotal * 100).ToArray();
-                        for (int i = 0; i < valuesStillInPlay.Length; i++)
-                        {
-                            valuesStillInPlay[i] += remainderWeights[i] * leftoverValue;
-                        }
-
-                        weights = valuesStillInPlay;
-                    }
-
-                    for (int i = 0; i < weights.Length; i++)
-                    {
-                        newRate += intSocres[i] * weights[i];
-                    }
-
-                    question.AnswerRate = newRate;
-                }
-            }
-            else
+            if (scoresString == null || scoresString.Split(",", StringSplitOptions.RemoveEmptyEntries).Length == 0)
             {
                 question.LatestScores = score.ToString();
                 question.AnswerRate = score;
+            }
+            else
+            {
+                var scores = scoresString.Split(",", StringSplitOptions.RemoveEmptyEntries).ToList();
+
+                if (scores.Count >= numberOfStoredScores)
+                {
+                    scores.RemoveAt(0);
+                }
+                scores.Add(score.ToString());
+                question.LatestScores = string.Join(",", scores);
+
+                question.AnswerRate = CalculateWaightedAvarage(scores.ToArray());
             }
 
             question.TimesBeingAnswered++;
 
             context.SaveChanges();
+        }
+
+        private float CalculateWaightedAvarage(string[] scores)
+        {
+            //Reversing the score so [0] is the latest score
+            var intSocres = scores.Select(x => int.Parse(x)).Reverse().ToArray();
+            var scoresLength = intSocres.Length;
+            //taking only the latest 5 scores
+            if (scoresLength > 5)
+            {
+                scoresLength = 5;
+            }
+
+            //60 is the waight for the latest score
+            var weights = new float[] { 60, 20, 10, 5, 5 };
+
+            //If less than 5 scores, we take the remaining weights and distribute then proportionally to 
+            //to the weight who have coresponding score
+            if (scoresLength < 5)
+            {
+                var lessBy = 5 - scoresLength;
+                var weightToBeRedistributed = weights.Reverse().Take(lessBy).Sum();
+                var valuesStillInPlay = weights.Take(scoresLength).ToArray();
+                var newTotal = valuesStillInPlay.Sum();
+                var remainderWeights = valuesStillInPlay.Select(x => x / newTotal * 100).ToArray();
+
+                for (int i = 0; i < valuesStillInPlay.Length; i++)
+                {
+                    var scoreChunk = remainderWeights[i] * weightToBeRedistributed / 100f;
+                    valuesStillInPlay[i] += scoreChunk;
+                }
+
+                //Redefining the weights so they are less than 5 but still sum up to 100
+                weights = valuesStillInPlay;
+            }
+
+            //where we will accumulate the final rate
+            float finalRate = 0;
+            for (int i = 0; i < weights.Length; i++)
+            {
+                var scoreChunk = intSocres[i] * weights[i] / 100f;
+                //Console.WriteLine("Score: " + intSocres[i] + " Weight: " + weights[i] + " Chunk: " + scoreChunk);
+                finalRate += scoreChunk;
+            }
+
+            return finalRate;
         }
 
         public void SuggestForPublishing(int personalQuestionId, int userId)

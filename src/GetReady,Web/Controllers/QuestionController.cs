@@ -113,7 +113,7 @@ namespace GetReady.Web.Controllers
             try
             {
                 var userData = jwtService.ParseData(this.User);
-                questionService.GetPersonal(id, userData.UserId);
+                questionService.DeletePersonal(id, userData.UserId);
                 return Ok();
             }
             catch (Exception e)
